@@ -51,37 +51,37 @@ sleep() { :; }
 STUBS
 
 for scenario in missing existing early-return custom-path; do
-    home="$ROOT/$scenario"
-    mkdir -p "$home/snapchain" "$home/bin"
-    printf '#!/bin/bash\nexit 0\n' > "$home/bin/operator-tool"
-    chmod +x "$home/bin/operator-tool"
-    printf 'AGREE_NO_REWARDS_FOR_ME=true\nSKIP_SELF_UPGRADE=true\n' > "$home/snapchain/.env"
+    scenario_home="$ROOT/$scenario"
+    mkdir -p "$scenario_home/snapchain" "$scenario_home/bin"
+    printf '#!/bin/bash\nexit 0\n' > "$scenario_home/bin/operator-tool"
+    chmod +x "$scenario_home/bin/operator-tool"
+    printf 'AGREE_NO_REWARDS_FOR_ME=true\nSKIP_SELF_UPGRADE=true\n' > "$scenario_home/snapchain/.env"
     case "$scenario" in
         existing)
-            printf 'export PATH="$HOME/bin:$PATH"\nprintf loaded > "$HOME/bashrc-loaded"\n' > "$home/.bashrc"
+            printf 'export PATH="$HOME/bin:$PATH"\nprintf loaded > "$HOME/bashrc-loaded"\n' > "$scenario_home/.bashrc"
             ;;
         early-return)
-            printf 'case $- in *i*) ;; *) return ;; esac\n' > "$home/.bashrc"
+            printf 'case $- in *i*) ;; *) return ;; esac\n' > "$scenario_home/.bashrc"
             ;;
     esac
     initial_path=/usr/bin:/bin
-    if [[ "$scenario" == custom-path ]]; then initial_path="$home/bin:$initial_path"; fi
+    if [[ "$scenario" == custom-path ]]; then initial_path="$scenario_home/bin:$initial_path"; fi
     rc=0
-    output="$(cd "$home/snapchain" && env -i HOME="$home" PATH="$initial_path" \
+    output="$(cd "$scenario_home/snapchain" && env -i HOME="$scenario_home" PATH="$initial_path" \
         BASH_ENV="$ROOT/stubs.sh" /bin/bash "$SCRIPT" autoupgrade 2>&1)" || rc=$?
     check "$scenario: successful exit" test "$rc" -eq 0
     check "$scenario: completed autoupgrade" grep -q 'Completed snapchain autoupgrade' <<< "$output"
     check "$scenario: no missing bashrc error" test "${output#*No such file or directory}" = "$output"
-    observed_path="$(cat "$home/observed-path")"
+    observed_path="$(cat "$scenario_home/observed-path")"
     for directory in /usr/local/sbin /usr/local/bin /usr/sbin /usr/bin /sbin /bin; do
         check "$scenario: PATH includes $directory" path_includes "$directory"
     done
-    check "$scenario: service restart intercepted" grep -qx 'compose up -d snapchain' "$home/calls"
+    check "$scenario: service restart intercepted" grep -qx 'compose up -d snapchain' "$scenario_home/calls"
     if [[ "$scenario" == existing ]]; then
-        check "$scenario: bashrc loaded" test -f "$home/bashrc-loaded"
+        check "$scenario: bashrc loaded" test -f "$scenario_home/bashrc-loaded"
     fi
     if [[ "$scenario" == existing || "$scenario" == custom-path ]]; then
-        check "$scenario: custom tool remains available" grep -qx "$home/bin/operator-tool" "$home/observed-tool"
+        check "$scenario: custom tool remains available" grep -qx "$scenario_home/bin/operator-tool" "$scenario_home/observed-tool"
     fi
 done
 
