@@ -613,9 +613,12 @@ fi
 
 if [ "$1" == "autoupgrade" ]; then
     # Autoupgrade cronjob needs the correct $PATH entries
-    if [[ ! -f ~/.bashrc ]]; then
+    if [[ -f ~/.bashrc ]]; then
       source ~/.bashrc
     fi
+    # Some .bashrc files return early in non-interactive shells. Keep standard
+    # tool locations available to cron while retaining operator PATH entries.
+    export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin${PATH:+:$PATH}"
 
     echo "$(date) Attempting snapchain autoupgrade..."
 
@@ -656,3 +659,4 @@ fi
 echo "❌ Invalid command: $1"
 echo ""
 exec "$0" help
+
