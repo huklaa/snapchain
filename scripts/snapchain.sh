@@ -659,4 +659,3 @@ fi
 echo "❌ Invalid command: $1"
 echo ""
 exec "$0" help
-
